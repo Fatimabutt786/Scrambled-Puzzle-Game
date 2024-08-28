@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrambled Puzzle Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        .selection-screen {
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #333;
+        }
+
+        #image-options {
+            display: grid;
+            grid-template-columns: repeat(5, 120px); /* 5 columns */
+            grid-template-rows: repeat(2, 120px); /* 2 rows */
+            gap: 10px;
+            justify-content: center;
+        }
+
+        #image-options img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s ease, border 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        #image-options img:hover {
+            transform: scale(1.05);
+        }
+
+        #image-options img.selected {
+            border-color: #007bff;
+            transform: scale(1.05);
+        }
+
+        #start-button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        #start-button:hover {
+            background-color: #0056b3;
+            transform: scale(1.02);
+        }
+
+        #puzzle-container {
+            display: none;
+            margin: 20px auto;
+            width: 440px;
+            text-align: center;
+        }
+
+        #puzzle-area {
+            width: 400px;
+            height: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-template-rows: repeat(4, 100px);
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .piece {
+            background-color: #eee;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            cursor: move;
+            background-size: 400px 400px;
+            background-repeat: no-repeat;
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 4px;
+            transition: transform 0.3s ease;
+        }
+
+        #timer-display {
+            margin-top: 10px;
+            font-size: 22px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        .congrats {
+            display: none;
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="selection-screen">
+        <h1>Select a Puzzle</h1>
+        <div id="image-options">
+            <img src="puzzle.png" alt="Puzzle 1">
+            <img src="puzzle1.png" alt="Puzzle 2">
+            <img src="puzzle2.png" alt="Puzzle 3">
+            <img src="puzzle3.png" alt="Puzzle 4">
+            <img src="puzzle4.png" alt="Puzzle 5">
+            <img src="puzzle5.png" alt="Puzzle 6">
+            <img src="puzzle6.png" alt="Puzzle 7">
+            <img src="puzzle7.png" alt="Puzzle 8">
+            <img src="puzzle8.png" alt="Puzzle 9">
+            <img src="puzzle9.png" alt="Puzzle 10">
+        </div>
+        <button id="start-button">Start Puzzle</button>
+        <div id="puzzle-preview"></div>
+    </div>
+
+    <div id="puzzle-container">
+        <div id="puzzle-area"></div>
+        <div id="timer-display">Time: 00:00</div>
+        <div class="congrats">Congratulations! You solved the puzzle!</div>
+    </div>
+
+    <script>
+        const images = [
+            'puzzle.png', 'puzzle1.png', 'puzzle2.png', 'puzzle3.png', 'puzzle4.png',
+            'puzzle5.png', 'puzzle6.png', 'puzzle7.png', 'puzzle8.png', 'puzzle9.png'
+        ];
+    
+        const imageOptions = document.querySelectorAll('#image-options img');
+        const startButton = document.getElementById('start-button');
+        const puzzleContainer = document.getElementById('puzzle-container');
+        const puzzleArea = document.getElementById('puzzle-area');
+        const timerDisplay = document.getElementById('timer-display');
+        const congratsMessage = document.querySelector('.congrats');
+        let selectedImage = '';
+        let pieceSize = 100;
+        let rows = 4;
+        let cols = 4;
+        let pieceElements = [];
+        let startTime;
+        let timerInterval;
+        let finalTime = '';
+    
+        imageOptions.forEach(img => {
+            img.addEventListener('click', () => {
+                imageOptions.forEach(i => i.classList.remove('selected'));
+                img.classList.add('selected');
+                selectedImage = img.src;
+                startButton.style.display = 'block';
+            });
+        });
+    
+        startButton.addEventListener('click', () => {
+            puzzleContainer.style.display = 'block';
+            startButton.style.display = 'none';
+            startPuzzle();
+            startTimer();
+        });
+    
+        function startPuzzle() {
+            puzzleArea.innerHTML = '';
+            let pieces = Array.from({ length: rows * cols }, (_, i) => i);
+            shuffle(pieces);
+    
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const index = pieces.shift();
+                    const piece = document.createElement('div');
+                    piece.classList.add('piece');
+                    piece.draggable = true;
+                    piece.dataset.index = index;
+                    piece.style.backgroundImage = `url(${selectedImage})`;
+                    piece.style.backgroundPosition = `-${col * pieceSize}px -${row * pieceSize}px`;
+                    piece.style.transform = `translate(${(index % cols) * pieceSize}px, ${Math.floor(index / cols) * pieceSize}px)`;
+    
+                    piece.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', e.target.dataset.index);
+                        e.target.classList.add('dragging');
+                    });
+    
+                    piece.addEventListener('dragend', (e) => {
+                        e.target.classList.remove('dragging');
+                        checkPuzzleSolved(); // Check if puzzle is solved after each drag
+                    });
+    
+                    piece.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                    });
+    
+                    piece.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        const draggedIndex = e.dataTransfer.getData('text/plain');
+                        const targetIndex = e.target.dataset.index;
+    
+                        if (isAdjacent(parseInt(draggedIndex), parseInt(targetIndex))) {
+                            swapPieces(parseInt(draggedIndex), parseInt(targetIndex));
+                        }
+                    });
+    
+                    puzzleArea.appendChild(piece);
+                    pieceElements.push(piece);
+                }
+            }
+        }
+    
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+    
+        function swapPieces(index1, index2) {
+            const piece1 = pieceElements.find(p => p.dataset.index == index1);
+            const piece2 = pieceElements.find(p => p.dataset.index == index2);
+    
+            const tempTransform = piece1.style.transform;
+            piece1.style.transform = piece2.style.transform;
+            piece2.style.transform = tempTransform;
+    
+            [piece1.dataset.index, piece2.dataset.index] = [piece2.dataset.index, piece1.dataset.index];
+        }
+    
+        function isAdjacent(index1, index2) {
+            const row1 = Math.floor(index1 / cols);
+            const col1 = index1 % cols;
+            const row2 = Math.floor(index2 / cols);
+            const col2 = index2 % cols;
+    
+            return (Math.abs(row1 - row2) === 1 && col1 === col2) || (Math.abs(col1 - col2) === 1 && row1 === row2);
+        }
+    
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                timerDisplay.textContent = `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+    
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+    
+        function checkPuzzleSolved() {
+            const pieces = Array.from(puzzleArea.children);
+            const correctOrder = pieces.every((piece, index) => piece.dataset.index == index);
+    
+            if (correctOrder) {
+                stopTimer();
+                const elapsed = Date.now() - startTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                finalTime = `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                congratsMessage.textContent = `Congratulations! You solved the puzzle! ${finalTime}`;
+                congratsMessage.style.display = 'block';
+            }
+        }
+    </script>
+    
+</body>
+</html>
